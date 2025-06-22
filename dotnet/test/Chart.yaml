@@ -1,0 +1,10 @@
+apiVersion: v2
+name: dotnet-test
+description: A helm chart for dotnet
+type: library
+version: 0.0.1
+maintainers:
+- name: Eddie Tisma
+  url: https://github.com/buildcharts/charts/
+sources:
+- https://github.com/buildcharts/charts/blob/main/dotnet/test/
