@@ -60,37 +60,45 @@ dependencies:
 Builds the specified `.csproj` or `.sln` file using `dotnet build`.
 
 ```yaml
-- src: src/MyApp/MyApp.csproj
-  type: build
+targets:
+  src/MyApp/MyApp.csproj:
+    type: build
 ```
 
 ### `type: test`
 Runs tests for a .NET project and collects results.
 
 ```yaml
-- src: tests/MyApp.Tests/MyApp.Tests.csproj
-  type: test
+targets:
+  tests/MyApp.Tests/MyApp.Tests.csproj:
+    type: test
 ```
 
 ### `type: nuget`
 Packs a .NET project into a NuGet package.
 
-
 ```yaml
-- src: src/MyApp/MyApp.csproj
-  type: nuget
-  with:
-    source: https://api.nuget.org/v3/index.json
-    apiKey: ${{ secrets.NUGET_API_KEY }}
+targets:
+  src/MyApp/MyApp.csproj:
+    type: nuget
+    with:
+      source: https://api.nuget.org/v3/index.json
+      apiKey: ${{ secrets.NUGET_API_KEY }}
 ```
 
 ### `type: docker`
 Publishes a .NET project and prepares a runtime docker image using the published output.
 
 ```yaml
-- src: src/MyApp/MyApp.csproj
-  type: docker
-  with:
-    base: mcr.microsoft.com/dotnet/aspnet:9.0
-    tags: ["ghcr.io/your-org/myapp:latest"]
+targets:
+  src/MyApp/MyApp.csproj:
+    type: docker
+    with:
+      base: mcr.microsoft.com/dotnet/aspnet:9.0
+      tags: ["ghcr.io/your-org/myapp:latest"]
 ```
+
+## Links
+- https://github.com/dotnet/dotnet-docker/blob/main/README.md
+- https://github.com/dotnet/dotnet-docker/blob/main/documentation/scenarios/nuget-credentials.md
+- https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#continuousintegrationbuild
