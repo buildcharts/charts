@@ -75,7 +75,6 @@ Runs tests for a .NET project and collects results.
 ### `type: nuget`
 Packs a .NET project into a NuGet package.
 
-
 ```yaml
 - src: src/MyApp/MyApp.csproj
   type: nuget
@@ -94,3 +93,8 @@ Publishes a .NET project and prepares a runtime docker image using the published
     base: mcr.microsoft.com/dotnet/aspnet:9.0
     tags: ["ghcr.io/your-org/myapp:latest"]
 ```
+
+## Links
+- https://github.com/dotnet/dotnet-docker/blob/main/README.md
+- https://github.com/dotnet/dotnet-docker/blob/main/documentation/scenarios/nuget-credentials.md
+- https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#continuousintegrationbuild

@@ -2,4 +2,4 @@ apiVersion: v2
 name: dotnet-docker
 description: A helm chart for dotnet
 type: library
-version: 0.0.1
+version: 0.0.2

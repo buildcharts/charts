@@ -4,15 +4,11 @@
 FROM build AS test
 
 ARG BUILDCHARTS_SRC
-ENV BUILDCHARTS_SRC=$BUILDCHARTS_SRC
-
 ARG CONFIGURATION=Release
-ENV CONFIGURATION=$CONFIGURATION
 
-ARG RESULTS_OUTPUT=/output
-ENV RESULTS_OUTPUT=$RESULTS_OUTPUT
-
-RUN dotnet test /src/$BUILDCHARTS_SRC \
+# execute unit tests
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    dotnet test /src/$BUILDCHARTS_SRC \
     --no-build \
     --no-restore \
     --configuration $CONFIGURATION \
@@ -20,5 +16,6 @@ RUN dotnet test /src/$BUILDCHARTS_SRC \
     --results-directory /tmp || \
     echo "⚠️ dotnet test failed, continuing so results can be verified later" 
 
+# copy to output
 RUN mkdir -p "$RESULTS_OUTPUT" && \
-    cp /tmp/*.trx "$RESULTS_OUTPUT/" 2>/dev/null || echo "⚠️ No .trx files found to copy"
+    cp /tmp/*.trx "/output/" 2>/dev/null || echo "⚠️ No .trx files found to copy"
