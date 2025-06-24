@@ -4,22 +4,19 @@
 FROM build AS publish
 
 ARG BUILDCHARTS_SRC
-ENV BUILDCHARTS_SRC=$BUILDCHARTS_SRC
-
 ARG CONFIGURATION=Release
-ENV CONFIGURATION=$CONFIGURATION
 
-ARG PUBLISH_OUTPUT=/output
-ENV PUBLISH_OUTPUT=$PUBLISH_OUTPUT
+# Publish application and dependencies for deployment.
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    dotnet publish "/src/$BUILDCHARTS_SRC" \
+        --no-build \
+        --no-restore \
+        --configuration "$CONFIGURATION" \
+        --output "/output"
 
-RUN dotnet publish /src/$BUILDCHARTS_SRC \
-    --no-build \
-    --no-restore \
-    --configuration $CONFIGURATION \
-    --output $PUBLISH_OUTPUT
-
+# Ensure static entrypoint in final image.
 RUN DLL_NAME=$(basename "$BUILDCHARTS_SRC" .csproj).dll && \
-    echo '#!/bin/sh' > /entrypoint.sh && \
+    echo "#!/bin/sh" > /entrypoint.sh && \
     echo "exec dotnet /app/$DLL_NAME \"\$@\"" >> /entrypoint.sh && \
     chmod +x /entrypoint.sh
 
