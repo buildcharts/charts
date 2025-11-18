@@ -1,8 +1,9 @@
 # `buildcharts` for .NET 
 
-`buildcharts` includes first-class support for .NET projects, using a set of reusable pipeline templates—called **charts**—that automate common workflows such as building, testing, packaging, and publishing .NET applications.
+`buildcharts` includes first-class support for .NET projects, using a set of reusable pipeline templates - called **charts** - that automate common workflows such as building, testing, packaging, and publishing .NET application. Consist of a set of dockerfiles that follows docker guidance and best-practices.
 
-> Note that these charts is mostly for getting started. Preferably you bring your own charts for full control.
+> [!NOTE]
+> These charts is mostly for getting started. Preferably you bring your own charts for full control.
 
 ## File structure
 ```
@@ -82,7 +83,8 @@ targets:
   src/MyApp/MyApp.csproj:
     type: nuget
     with:
-      pathsInclude: src/MyDependentContractsNuget
+      # `pathsInclude` can be used to only pack nuget when git diffs in origin/HEAD includes specific paths.
+      pathsInclude: src/MyDependentContractsNuget src/MyDependentContractsNuget
 ```
 
 ### `type: docker`
@@ -98,8 +100,9 @@ targets:
 ```
 
 ## Links
+- https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#continuousintegrationbuild
+- https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/sourcelink
+- https://github.com/microsoft/artifacts-credprovider
 - https://github.com/dotnet/dotnet-docker/blob/main/README.md
 - https://github.com/dotnet/dotnet-docker/blob/main/documentation/scenarios/nuget-credentials.md
-- https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#continuousintegrationbuild
-- https://github.com/microsoft/artifacts-credprovider
 - https://github.com/dotnet/sourcelink/tree/main/docs#minimal-git-repository-metadata
