@@ -19,6 +19,11 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
         --collect "XPlat Code Coverage" \
         --logger "trx;LogFileName=$(basename "$BUILDCHARTS_SRC" .csproj)_$(date +%Y%m%d-%H%M%S).trx" \
         --results-directory /results || \
-        echo "⚠️ dotnet test failed, continuing so results can be verified later" ; \
-    mkdir -p /output && cp /results/*.trx /output/ 2>/dev/null || true ; \
-    find /results -name 'coverage.cobertura.xml' -exec cp {} /output/ \; 2>/dev/null || true
+        echo "⚠️ dotnet test failed, continuing so results can be verified later"
+
+# Copy TRX and coverage files while preserving their relative paths.
+RUN mkdir -p /output && \
+    find /results -name '*.trx' \
+        -exec sh -c ' rel="${1#/results/}"; dst="/output/$(dirname "$rel")"; mkdir -p "$dst"; cp "$1" "$dst/" ' _ {} \; 2>/dev/null || true && \
+    find /results -path '*/In/buildkitsandbox/coverage.cobertura.xml' \
+        -exec sh -c 'rel="${1#/results/}"; dst="/output/$(dirname "$rel")"; mkdir -p "$dst"; cp "$1" "$dst/" ' _ {} \; 2>/dev/null || true

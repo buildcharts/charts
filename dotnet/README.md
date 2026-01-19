@@ -1,4 +1,4 @@
-# `buildcharts` for .NET 
+# Build charts for .NET 
 
 `buildcharts` includes first-class support for .NET projects, using a set of reusable pipeline templates - called **charts** - that automate common workflows such as building, testing, packaging, and publishing .NET application. Consist of a set of dockerfiles that follows docker guidance and best-practices.
 
@@ -117,6 +117,7 @@ targets:
 ```
 
 ## Links
+- https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/publish-test-results-v2?view=azure-pipelinesl#docker
 - https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#continuousintegrationbuild
 - https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/sourcelink
 - https://github.com/microsoft/artifacts-credprovider

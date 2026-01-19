@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y zip
 
 # Restore with secrets.
 RUN --mount=type=secret,id=VSS_NUGET_ACCESSTOKEN,env=VSS_NUGET_ACCESSTOKEN \
-    --mount=type=secret,id=VSS_NUGET_EXTERNAL_FEED_ENDPOINTS,env=VSS_NUGET_EXTERNAL_FEED_ENDPOINTS \
+    --mount=type=secret,id=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS,env=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS \
     --mount=type=cache,id=nuget,target=/root/.nuget/packages \
       dotnet restore "/src/$BUILDCHARTS_SRC" --runtime "$RUNTIME"
 
