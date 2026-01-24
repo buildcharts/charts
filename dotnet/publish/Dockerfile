@@ -1,14 +1,13 @@
 ###################################
-# Target: publish
+# Target: pre-publish
 ###################################
-FROM build AS publish
+FROM build AS pre-publish
 
 ARG BUILDCHARTS_SRC
 ARG CONFIGURATION=Release
 ARG DEBUG_SYMBOLS=false
 ARG DEBUG_TYPE=none
 ARG ENABLE_COMPRESSION_IN_SINGLE_FILE=true
-ARG GENERATE_DOCUMENTATION_FILE=false
 ARG PUBLISH_AOT=false
 ARG PUBLISH_IIS_ASSETS=false
 ARG PUBLISH_SINGLE_FILE=true
@@ -38,7 +37,6 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
         /p:DebugSymbols="$DEBUG_SYMBOLS" \
         /p:DebugType="$DEBUG_TYPE" \
         /p:EnableCompressionInSingleFile="$ENABLE_COMPRESSION_IN_SINGLE_FILE" \
-        /p:GenerateDocumentationFile="$GENERATE_DOCUMENTATION_FILE" \
         /p:PublishAot="$PUBLISH_AOT" \
         /p:PublishIISAssets="$PUBLISH_IIS_ASSETS" \
         /p:PublishSingleFile="$PUBLISH_SINGLE_FILE" \
@@ -54,3 +52,9 @@ RUN mkdir -p /output && \
     name="krp_${VERSION}_${RUNTIME}.zip" && \
     cd /app/publish && \
     zip -r "/output/$name" .
+
+###################################
+# Target: publish
+###################################
+FROM scratch AS publish
+COPY --from=pre-publish /output /
