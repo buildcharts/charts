@@ -1,7 +1,7 @@
 ###################################
-# Target: publish
+# Target: pre-publish
 ###################################
-FROM build AS publish
+FROM build AS pre-publish
 
 ARG BUILDCHARTS_SRC
 ARG CONFIGURATION=Release
@@ -54,3 +54,9 @@ RUN mkdir -p /output && \
     name="krp_${VERSION}_${RUNTIME}.zip" && \
     cd /app/publish && \
     zip -r "/output/$name" .
+
+###################################
+# Target: publish
+###################################
+FROM scratch AS publish
+COPY --from=pre-publish /output /
