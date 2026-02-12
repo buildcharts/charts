@@ -66,32 +66,32 @@ RUN set -eu; \
       exit 1; \
     fi
 
-RUN set -eu; \
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    set -eu; \
+    mkdir -p /output; \
     PATHS_INCLUDE="${PATHS_INCLUDE:-}"; \
     if [ -n "$PATHS_INCLUDE" ]; then \
-        echo "Detecting changes in $PATHS_INCLUDE when comparing to origin/HEAD" >&2; \
-        if git -C /src diff --quiet --exit-code origin/HEAD -- $PATHS_INCLUDE; then \
-            mkdir -p /output; \
-            echo "No changes detected. Skipping nuget pack..." >&2; \
-            exit 0; \
-        else \
-            echo "Changes detected" >&2; \
+        # Prefer full branch diff (merge-base -> HEAD). 
+        BASE_REF="origin/HEAD...HEAD"; \
+        # Check if origin/HEAD exists (e.g. not a shallow checkout).
+        if ! git -C /src rev-parse --verify --quiet origin/HEAD >/dev/null; then \
+            BASE_REF=""; \
+            echo "origin/HEAD not found. Falling back to files changed in HEAD commit." >&2; \
         fi; \
-    # Optional: Enable this to only pack nuget if there are changes in the $BUILDCHARTS_DIR when comparing to origin/HEAD.
-    # else \
-    #     echo "Detecting changes in  $BUILDCHARTS_DIR when comparing to origin/HEAD" >&2; \
-    #     BUILDCHARTS_DIR="$(dirname "$BUILDCHARTS_SRC")"; \
-    #     if git -C /src diff --quiet --exit-code origin/HEAD -- "$BUILDCHARTS_DIR"; then \
-    #         mkdir -p /output; \
-    #         echo "No changes detected. Skipping nuget pack..." >&2; \
-    #         exit 0; \
-    #     else \
-    #         echo "Changes detected" >&2; \
-    #     fi; \
-    fi;
-
-# Pack the code into a nuget package when changes are detected.
-RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+        if [ -n "$BASE_REF" ]; then \
+            echo "Detecting changes in $PATHS_INCLUDE against $BASE_REF" >&2; \
+            if git -C /src diff --quiet --exit-code "$BASE_REF" -- $PATHS_INCLUDE; then \
+                echo "No changes detected. Skipping nuget pack..." >&2; \
+                exit 0; \
+            fi; \
+        fi; \
+        # Fallback to HEAD-only changed files (often a simulated merge commit in CI).
+        if [ -z "$BASE_REF" ] && ! git -C /src diff-tree --no-commit-id --name-only -r HEAD -- $PATHS_INCLUDE | grep -q .; then \
+            echo "No changes detected in HEAD commit. Skipping nuget pack..." >&2; \
+            exit 0; \
+        fi; \
+        echo "Changes detected. Running dotnet pack..." >&2; \
+    fi; \
     dotnet pack "/src/$BUILDCHARTS_SRC" \
         --no-build \
         --configuration "$CONFIGURATION" \
