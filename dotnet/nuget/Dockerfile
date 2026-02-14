@@ -94,11 +94,20 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
                 exit 0; \
             fi; \
         else \
-            echo "No origin main/master/HEAD ref found. Falling back to HEAD commit file list." >&2; \
-            # Fallback to HEAD commit changed files.
-            # Use 'git show -m' so merge commits in CI are handled correctly.
+            # No remote compare ref is available (common in shallow/synthetic CI checkouts).
+            # In ADO PR builds, HEAD is often a synthetic merge commit where:
+            # - HEAD^1 is usually target branch tip
+            # - HEAD^2 is usually source branch tip
+            # Prefer HEAD^1..HEAD to approximate "what changed vs target" in this fallback mode.
             head_changed=0; \
-            git -C /src show --name-only --pretty=format: -m HEAD -- $PATHS_INCLUDE | grep -q . && head_changed=1 || true; \
+            if git -C /src rev-parse --verify --quiet HEAD^2 >/dev/null; then \
+                echo "No origin refs found. Using merge-parent fallback (HEAD^1..HEAD)." >&2; \
+                git -C /src diff --quiet --exit-code HEAD^1..HEAD -- $PATHS_INCLUDE || head_changed=1; \
+            else \
+                echo "No origin refs found. Falling back to HEAD commit file list." >&2; \
+                # Non-merge fallback: inspect changed files in HEAD only.
+                git -C /src show --name-only --pretty=format: HEAD -- $PATHS_INCLUDE | grep -q . && head_changed=1 || true; \
+            fi; \
             worktree_clean=0; \
             # Check unstaged changes
             git -C /src diff --quiet --exit-code -- $PATHS_INCLUDE || worktree_clean=$?; \
@@ -106,7 +115,7 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
             # Check staged changes 
             git -C /src diff --cached --quiet --exit-code -- $PATHS_INCLUDE || index_clean=$?; \
             if [ "$head_changed" -eq 0 ] && [ "$worktree_clean" -eq 0 ] && [ "$index_clean" -eq 0 ]; then \
-                echo "No changes detected (HEAD commit). Skipping nuget pack..." >&2; \
+                echo "No changes detected (fallback mode). Skipping nuget pack..." >&2; \
                 exit 0; \
             fi; \
         fi; \
