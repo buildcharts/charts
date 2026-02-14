@@ -71,18 +71,11 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     mkdir -p /output; \
     PATHS_INCLUDE="${PATHS_INCLUDE:-}"; \
     if [ -n "$PATHS_INCLUDE" ]; then \
-        # Prefer full branch diff (merge-base -> HEAD).
-        BASE_REF="origin/HEAD...HEAD"; \
         # Check if origin/HEAD exists (e.g. not a shallow checkout).
-        if ! git -C /src rev-parse --verify --quiet origin/HEAD >/dev/null; then \
-            BASE_REF=""; \
-            echo "origin/HEAD not found. Falling back to files changed in HEAD commit." >&2; \
-        fi; \
-        if [ -n "$BASE_REF" ]; then \
-            echo "Detecting changes in $PATHS_INCLUDE against $BASE_REF" >&2; \
+        if git -C /src rev-parse --verify --quiet origin/HEAD >/dev/null; then \
             # Check branch/PR diff
             branch_clean=0; \
-            git -C /src diff --quiet --exit-code "$BASE_REF" -- $PATHS_INCLUDE || branch_clean=$?;  \
+            git -C /src diff --quiet --exit-code "origin/HEAD...HEAD" -- $PATHS_INCLUDE || branch_clean=$?;  \
             worktree_clean=0; \
             # Check unstaged changes
             git -C /src diff --quiet --exit-code -- $PATHS_INCLUDE || worktree_clean=$?;  \
@@ -90,14 +83,15 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
             # Check staged changes
             git -C /src diff --cached --quiet --exit-code -- $PATHS_INCLUDE || index_clean=$?;  \
             if [ "$branch_clean" -eq 0 ] && [ "$worktree_clean" -eq 0 ] && [ "$index_clean" -eq 0 ]; then \
-                echo "No changes detected. Skipping nuget pack..." >&2; \
+                echo "No changes detected (origin/HEAD...HEAD). Skipping nuget pack..." >&2; \
                 exit 0; \
             fi; \
         else \
-            # Fallback to HEAD-only changed files (often a simulated merge commit in CI).
+            echo "origin/HEAD not found. Falling back to HEAD commit file list." >&2; \
+            # Fallback to HEAD commit changed files.
+            # Use 'git show -m' so merge commits in CI are handled correctly.
             head_changed=0; \
-            # Check HEAD commit files 
-            git -C /src diff-tree --no-commit-id --name-only -r HEAD -- $PATHS_INCLUDE | grep -q . && head_changed=1 || true; \
+            git -C /src show --name-only --pretty=format: -m HEAD -- $PATHS_INCLUDE | grep -q . && head_changed=1 || true; \
             worktree_clean=0; \
             # Check unstaged changes
             git -C /src diff --quiet --exit-code -- $PATHS_INCLUDE || worktree_clean=$?;  \
@@ -105,7 +99,7 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
             # Check staged changes 
             git -C /src diff --cached --quiet --exit-code -- $PATHS_INCLUDE || index_clean=$?; \
             if [ "$head_changed" -eq 0 ] && [ "$worktree_clean" -eq 0 ] && [ "$index_clean" -eq 0 ]; then \
-                echo "No changes detected. Skipping nuget pack..." >&2; \
+                echo "No changes detected (HEAD commit). Skipping nuget pack..." >&2; \
                 exit 0; \
             fi; \
         fi; \
