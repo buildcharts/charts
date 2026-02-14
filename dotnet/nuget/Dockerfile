@@ -94,30 +94,9 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
                 exit 0; \
             fi; \
         else \
-            # No remote compare ref is available (common in shallow/synthetic CI checkouts).
-            # In ADO PR builds, HEAD is often a synthetic merge commit where:
-            # - HEAD^1 is usually target branch tip
-            # - HEAD^2 is usually source branch tip
-            # Prefer HEAD^1..HEAD^2 to compare source vs target when remote refs are unavailable.
-            head_changed=0; \
-            if git -C /src rev-parse --verify --quiet HEAD^2 >/dev/null; then \
-                echo "No origin refs found. Using merge-parent fallback (HEAD^1..HEAD^2)." >&2; \
-                git -C /src diff --quiet --exit-code HEAD^1..HEAD^2 -- $PATHS_INCLUDE || head_changed=1; \
-            else \
-                echo "No origin refs found. Falling back to HEAD commit file list." >&2; \
-                # Non-merge fallback: inspect changed files in HEAD only.
-                git -C /src show --name-only --pretty=format: HEAD -- $PATHS_INCLUDE | grep -q . && head_changed=1 || true; \
-            fi; \
-            worktree_clean=0; \
-            # Check unstaged changes
-            git -C /src diff --quiet --exit-code -- $PATHS_INCLUDE || worktree_clean=$?; \
-            index_clean=0; \
-            # Check staged changes 
-            git -C /src diff --cached --quiet --exit-code -- $PATHS_INCLUDE || index_clean=$?; \
-            if [ "$head_changed" -eq 0 ] && [ "$worktree_clean" -eq 0 ] && [ "$index_clean" -eq 0 ]; then \
-                echo "No changes detected (fallback mode). Skipping nuget pack..." >&2; \
-                exit 0; \
-            fi; \
+            # No remote compare ref found. With fetchDepth=0 + explicit fetch in CI,
+            # this path should be rare. Fail open to avoid false skips.
+            echo "No origin compare ref found. Running dotnet pack..." >&2; \
         fi; \
     fi; \
     echo "Changes detected. Running dotnet pack..." >&2; \
