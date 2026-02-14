@@ -98,11 +98,11 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
             # In ADO PR builds, HEAD is often a synthetic merge commit where:
             # - HEAD^1 is usually target branch tip
             # - HEAD^2 is usually source branch tip
-            # Prefer HEAD^1..HEAD to approximate "what changed vs target" in this fallback mode.
+            # Prefer HEAD^1..HEAD^2 to compare source vs target when remote refs are unavailable.
             head_changed=0; \
             if git -C /src rev-parse --verify --quiet HEAD^2 >/dev/null; then \
-                echo "No origin refs found. Using merge-parent fallback (HEAD^1..HEAD)." >&2; \
-                git -C /src diff --quiet --exit-code HEAD^1..HEAD -- $PATHS_INCLUDE || head_changed=1; \
+                echo "No origin refs found. Using merge-parent fallback (HEAD^1..HEAD^2)." >&2; \
+                git -C /src diff --quiet --exit-code HEAD^1..HEAD^2 -- $PATHS_INCLUDE || head_changed=1; \
             else \
                 echo "No origin refs found. Falling back to HEAD commit file list." >&2; \
                 # Non-merge fallback: inspect changed files in HEAD only.
