@@ -7,6 +7,7 @@ ARG BUILDCHARTS_SRC
 ARG VERSION
 ARG CONFIGURATION=Release
 ARG PATHS_INCLUDE
+ARG SOURCELINK_STRICT=1
 
 # Follow this for SourceLink + deterministic NuGet packages:
 # - Ensure '.dockerignore' does NOT list '.git' (when not following the minimal git repository metadata guide in docs).
@@ -62,8 +63,12 @@ RUN set -eu; \
     if [ "$warnings" -eq 0 ]; then \
       echo "SourceLink prerequisites OK" >&2; \
     else \
-      echo "SourceLink prerequisites completed with warnings" >&2; \
-      exit 1; \
+      if [ "$SOURCELINK_STRICT" = "1" ] || [ "$SOURCELINK_STRICT" = "true" ]; then \
+        echo "SourceLink prerequisites completed with warnings" >&2; \
+        exit 1; \
+      else \
+        echo "SourceLink prerequisites completed with warnings (SOURCELINK_STRICT=$SOURCELINK_STRICT; continuing)" >&2; \
+      fi; \
     fi
 
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
