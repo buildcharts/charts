@@ -16,11 +16,10 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
 
 # Ensure static app.* startup files for ENTRYPOINT ["dotnet","/app/app.dll"].
 # Dotnet host also requires matching app.deps.json and app.runtimeconfig.json.
-RUN DLL_NAME=$(basename "$BUILDCHARTS_SRC" .csproj).dll && \
-    APP_NAME="${DLL_NAME%.dll}" && \
-    cp -f "/output/$DLL_NAME" /output/app.dll && \
-    cp -f "/output/$APP_NAME.deps.json" /output/app.deps.json && \
-    cp -f "/output/$APP_NAME.runtimeconfig.json" /output/app.runtimeconfig.json
+RUN PROJECT_NAME="$(basename "$BUILDCHARTS_SRC" .csproj)" && \
+    cp -f "/output/$PROJECT_NAME.dll" /output/app.dll && \
+    cp -f "/output/$PROJECT_NAME.deps.json" /output/app.deps.json && \
+    cp -f "/output/$PROJECT_NAME.runtimeconfig.json" /output/app.runtimeconfig.json
 
 ###################################
 # Target: docker
