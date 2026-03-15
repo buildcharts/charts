@@ -82,7 +82,7 @@ targets:
   src/MyApp/MyApp.csproj:
     type: docker
     with:
-      base: mcr.microsoft.com/dotnet/aspnet:9.0
+      base: mcr.microsoft.com/dotnet/aspnet:10.0
       tags: ["ghcr.io/your-org/myapp:latest"]
 ```
 
