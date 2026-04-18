@@ -8,6 +8,9 @@ ARG CONFIGURATION=Release
 
 # Publish application and dependencies for deployment.
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
+    --mount=type=cache,target=/root/.local/share/NuGet/plugins-cache \
+    --mount=type=cache,target=/tmp/NuGetScratchroot \
     dotnet publish "/src/$BUILDCHARTS_SRC" \
         --no-build \
         --no-restore \

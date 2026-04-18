@@ -120,6 +120,7 @@ targets:
 - https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/publish-test-results-v2?view=azure-pipelinesl#docker
 - https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#continuousintegrationbuild
 - https://learn.microsoft.com/en-us/dotnet/standard/library-guidance/sourcelink
+- https://learn.microsoft.com/en-us/nuget/consume-packages
 - https://github.com/microsoft/artifacts-credprovider
 - https://github.com/dotnet/dotnet-docker/blob/main/README.md
 - https://github.com/dotnet/dotnet-docker/blob/main/documentation/scenarios/nuget-credentials.md

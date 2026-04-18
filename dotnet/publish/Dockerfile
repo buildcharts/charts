@@ -24,10 +24,16 @@ RUN apt-get update && apt-get install -y zip
 RUN --mount=type=secret,id=VSS_NUGET_ACCESSTOKEN,env=VSS_NUGET_ACCESSTOKEN \
     --mount=type=secret,id=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS,env=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS \
     --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
+    --mount=type=cache,target=/root/.local/share/NuGet/plugins-cache \
+    --mount=type=cache,target=/tmp/NuGetScratchroot \
       dotnet restore "/src/$BUILDCHARTS_SRC" --runtime "$RUNTIME"
 
 # Execute publish.
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
+    --mount=type=cache,target=/root/.local/share/NuGet/plugins-cache \
+    --mount=type=cache,target=/tmp/NuGetScratchroot \
     dotnet publish "/src/$BUILDCHARTS_SRC" \
         --no-restore \
         --configuration "$CONFIGURATION" \
