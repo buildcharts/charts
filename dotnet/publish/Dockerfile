@@ -10,6 +10,7 @@ ARG DEBUG_TYPE=none
 ARG ENABLE_COMPRESSION_IN_SINGLE_FILE=true
 ARG PUBLISH_AOT=false
 ARG PUBLISH_IIS_ASSETS=false
+ARG PUBLISH_NAME
 ARG PUBLISH_SINGLE_FILE=true
 ARG PUBLISH_TRIMMED=true
 ARG RUNTIME=win-x64
@@ -55,7 +56,15 @@ RUN rm -f /app/publish/aspnetcorev2_inprocess.dll
 
 # Create zip.
 RUN mkdir -p /output && \
-    name="krp_${VERSION}_${RUNTIME}.zip" && \
+    PUBLISH_NAME="${PUBLISH_NAME:-}" && \
+    if [ -z "$PUBLISH_NAME" ]; then \
+        PUBLISH_NAME="$(git -C /src config --get remote.origin.url 2>/dev/null || true)"; \
+        PUBLISH_NAME="${PUBLISH_NAME##*/}"; \
+        PUBLISH_NAME="${PUBLISH_NAME##*:}"; \
+        PUBLISH_NAME="${PUBLISH_NAME%.git}"; \
+    fi && \
+    PUBLISH_NAME="${PUBLISH_NAME:-$(basename "$BUILDCHARTS_SRC" .csproj)}" && \
+    name="${PUBLISH_NAME}_${VERSION}_${RUNTIME}.zip" && \
     cd /app/publish && \
     zip -r "/output/$name" .
 
