@@ -35,41 +35,67 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Helm push and sign
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          if [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            changed_dirs="$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}" --jq '.files[].filename' \
+              | awk -F/ '$1 == "dotnet" && NF >= 2 { print $1 "/" $2 "/" }' \
+              | sort -u)"
+          else
+            changed_dirs="$(gh api "repos/${{ github.repository }}/compare/${{ github.event.before }}...${{ github.sha }}" --jq '.files[].filename' \
+              | awk -F/ '$1 == "dotnet" && NF >= 2 { print $1 "/" $2 "/" }' \
+              | sort -u)"
+          fi
+
+          if [ -z "$changed_dirs" ]; then
+            echo "No chart changes detected. Skipping publish."
+            exit 0
+          fi
+
           for dir in */*/; do
-            if [ -f "$dir/Chart.yaml" ]; then
-              chart_name=$(grep '^name:' "$dir/Chart.yaml" | awk '{print $2}')
-              chart_version=$(grep '^version:' "$dir/Chart.yaml" | awk '{print $2}')
-              chart_file="./${chart_name}-${chart_version}.tgz"
-
-              echo ""
-              echo "============================"
-              echo "📦 Packaging $chart_name v$chart_version"
-              echo "============================"
-
-              helm dependency update "$dir"
-              helm package "$dir" --destination .
-
-              if [ -f "$chart_file" ]; then
-                echo "Chart package size: $(du -h "$chart_file" | cut -f1)"
-              fi
-
-              echo "Pushing $chart_name to OCI registry..."
-              push_output=$(helm push "./${chart_name}-${chart_version}.tgz" "oci://${OCI_REGISTRY}" 2>&1)
-              echo "$push_output"
-
-              chart_digest=$(echo "$push_output" | sed -n 's/^Digest: //p' | tail -n1)
-              if [ -z "$chart_digest" ]; then
-                echo "Failed to resolve digest for $chart_name after push"
-                exit 1
-              fi
-
-              chart_ref="${OCI_REGISTRY}/${chart_name}@${chart_digest}"
-              echo "Signing $chart_ref with cosign keyless..."
-              if ! cosign_output=$(cosign sign --yes "$chart_ref" 2>&1); then
-                echo "$cosign_output"
-                exit 1
-              fi
-              echo "Signed $chart_ref"
+            if [ ! -f "$dir/Chart.yaml" ]; then
+              continue
             fi
+
+            chart_name=$(grep '^name:' "$dir/Chart.yaml" | awk '{print $2}')
+            chart_version=$(grep '^version:' "$dir/Chart.yaml" | awk '{print $2}')
+            chart_file="./${chart_name}-${chart_version}.tgz"
+
+            if ! printf '%s\n' "$changed_dirs" | grep -Fxq -- "$dir"; then
+              echo "============================"
+              echo "📦 $chart_name v$chart_version"
+              echo "============================"
+              echo "Skipping... No changes detected in $dir"
+              continue
+            fi
+
+            echo "============================"
+            echo "📦 Packaging $chart_name v$chart_version"
+            echo "============================"
+
+            helm dependency update "$dir"
+            helm package "$dir" --destination .
+
+            if [ -f "$chart_file" ]; then
+              echo "Chart package size: $(du -h "$chart_file" | cut -f1)"
+            fi
+
+            echo "Pushing $chart_name to OCI registry..."
+            push_output=$(helm push "./${chart_name}-${chart_version}.tgz" "oci://${OCI_REGISTRY}" 2>&1)
+            echo "$push_output"
+
+            chart_digest=$(echo "$push_output" | sed -n 's/^Digest: //p' | tail -n1)
+            if [ -z "$chart_digest" ]; then
+              echo "Failed to resolve digest for $chart_name after push"
+              exit 1
+            fi
+
+            chart_ref="${OCI_REGISTRY}/${chart_name}@${chart_digest}"
+            echo "Signing $chart_ref with cosign keyless..."
+            if ! cosign_output=$(cosign sign --yes "$chart_ref" 2>&1); then
+              echo "$cosign_output"
+              exit 1
+            fi
+            echo "Signed $chart_ref"
           done
