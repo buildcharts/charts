@@ -18,9 +18,6 @@ ARG SELF_CONTAINED=true
 ARG TRIM_MODE=partial
 ARG VERSION
 
-# Install zip.
-RUN apt-get update && apt-get install -y zip
-
 # Restore with secrets.
 RUN --mount=type=secret,id=VSS_NUGET_ACCESSTOKEN,env=VSS_NUGET_ACCESSTOKEN \
     --mount=type=secret,id=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS,env=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS \
@@ -54,6 +51,22 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
 # Remove IIS hosting assets if the SDK still emits them.
 RUN rm -f /app/publish/aspnetcorev2_inprocess.dll
 
+###################################
+# Target: pre-publish-zip
+###################################
+FROM alpine:3.20 AS pre-publish-zip
+
+ARG BUILDCHARTS_SRC
+ARG PUBLISH_NAME
+ARG RUNTIME=win-x64
+ARG VERSION
+
+# Install zip.
+RUN apk add --no-cache zip
+
+# Copy published output.
+COPY --from=pre-publish /app/publish /app/publish
+
 # Create zip.
 RUN mkdir -p /output && \
     PUBLISH_NAME="${PUBLISH_NAME:-}" && \
@@ -64,12 +77,11 @@ RUN mkdir -p /output && \
         PUBLISH_NAME="${PUBLISH_NAME%.git}"; \
     fi && \
     PUBLISH_NAME="${PUBLISH_NAME:-$(basename "$BUILDCHARTS_SRC" .csproj)}" && \
-    name="${PUBLISH_NAME}_${VERSION}_${RUNTIME}.zip" && \
     cd /app/publish && \
-    zip -r "/output/$name" .
+    zip -r "/output/${PUBLISH_NAME}_${VERSION}_${RUNTIME}.zip" .
 
 ###################################
 # Target: publish
 ###################################
 FROM scratch AS publish
-COPY --from=pre-publish /output /
+COPY --from=pre-publish-zip /output /
