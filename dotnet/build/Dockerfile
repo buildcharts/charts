@@ -10,11 +10,6 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=true \
 
 WORKDIR /src
 
-ARG BUILDCHARTS_SRC
-ARG VERSION
-ARG CONFIGURATION=Release
-ARG COMMIT
-
 # Install the self-contained Azure Artifacts Credential Provider to enable support for ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS.
 RUN curl -L https://raw.githubusercontent.com/Microsoft/artifacts-credprovider/master/helpers/installcredprovider.sh | sh
 
@@ -23,6 +18,8 @@ COPY --link --parents *.sln *.slnx **/*.csproj **/*.dcproj **/[Nn]u[Gg]et.[Cc]on
 
 # Optional: Clean is only needed when bin/obj folders are NOT included in .dockerignore, which is best practice, so we skip it.
 #RUN dotnet clean 
+
+ARG BUILDCHARTS_SRC
 
 # Restore with secrets.
 RUN --mount=type=secret,id=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS,env=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS \
@@ -34,6 +31,10 @@ RUN --mount=type=secret,id=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS,
 
 # Copy code.
 COPY --link . .
+
+ARG CONFIGURATION=Release
+ARG COMMIT
+ARG VERSION
 
 # Execute build.
 RUN --mount=type=secret,id=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS,env=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS \
