@@ -5,6 +5,8 @@ FROM build AS pre-test
 
 ARG BUILDCHARTS_SRC
 ARG CONFIGURATION=Release
+ARG BUILDCHARTS_CACHE_SCOPE=default
+ARG TARGETARCH
 
 # Configure Testcontainers to talk to dind daemon used by the TestcontainersDinD@v1 plugin.
 ARG DOCKER_HOST=tcp://host.docker.internal:2375
@@ -15,6 +17,7 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
     --mount=type=cache,target=/root/.local/share/NuGet/plugins-cache \
     --mount=type=cache,target=/tmp/NuGetScratchroot \
+    --mount=type=cache,id=msbuild-obj-${BUILDCHARTS_CACHE_SCOPE}-build-${CONFIGURATION}-${TARGETARCH},target=/src/.buildcache/obj,sharing=shared \
     dotnet test "/src/$BUILDCHARTS_SRC" \
         --no-build \
         --no-restore \

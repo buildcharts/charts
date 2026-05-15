@@ -5,12 +5,15 @@ FROM build AS pre-docker
 
 ARG BUILDCHARTS_SRC
 ARG CONFIGURATION=Release
+ARG BUILDCHARTS_CACHE_SCOPE=default
+ARG TARGETARCH
 
 # Publish application and dependencies for deployment.
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
     --mount=type=cache,target=/root/.local/share/NuGet/plugins-cache \
     --mount=type=cache,target=/tmp/NuGetScratchroot \
+    --mount=type=cache,id=msbuild-obj-${BUILDCHARTS_CACHE_SCOPE}-build-${CONFIGURATION}-${TARGETARCH},target=/src/.buildcache/obj,sharing=shared \
     dotnet publish "/src/$BUILDCHARTS_SRC" \
         --no-build \
         --no-restore \

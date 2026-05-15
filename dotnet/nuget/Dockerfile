@@ -4,10 +4,15 @@
 FROM build AS pre-nuget
 
 ARG BUILDCHARTS_SRC
+ARG BUILDCHARTS_TYPE=nuget
+ARG BUILDCHARTS_CACHE_SCOPE=default
 ARG VERSION
+ARG COMMIT
 ARG CONFIGURATION=Release
+ARG TARGETARCH
 ARG PATHS_INCLUDE
 ARG SOURCELINK_STRICT=1
+ENV BUILDCHARTS_TYPE=$BUILDCHARTS_TYPE
 
 # Follow this for SourceLink + deterministic NuGet packages:
 # - Ensure '.dockerignore' does NOT list '.git' (when not following the minimal git repository metadata guide in docs).
@@ -71,10 +76,12 @@ RUN set -eu; \
       fi; \
     fi
 
-RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+RUN --mount=type=secret,id=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS,env=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS \
+    --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
     --mount=type=cache,target=/root/.local/share/NuGet/plugins-cache \
     --mount=type=cache,target=/tmp/NuGetScratchroot \
+    --mount=type=cache,id=msbuild-obj-${BUILDCHARTS_CACHE_SCOPE}-${BUILDCHARTS_TYPE}-${CONFIGURATION}-${TARGETARCH},target=/src/.buildcache/obj,sharing=locked \
     set -eu; \
     mkdir -p /output; \
     PATHS_INCLUDE="${PATHS_INCLUDE:-}"; \
@@ -108,11 +115,15 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
         fi; \
     fi; \
     echo "Changes detected. Running dotnet pack..." >&2; \
+    dotnet restore "/src/$BUILDCHARTS_SRC" --locked-mode --use-lock-file; \
     dotnet pack "/src/$BUILDCHARTS_SRC" \
-        --no-build \
+        --no-restore \
         --configuration "$CONFIGURATION" \
         --output "/output" \
-        /p:PackageVersion="$VERSION"
+        /p:ContinuousIntegrationBuild=true \
+        /p:PackageVersion="$VERSION" \
+        /p:SourceRevisionId="$COMMIT" \
+        /p:Version="$VERSION"
 
 ###################################
 # Target: nuget

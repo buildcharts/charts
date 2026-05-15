@@ -39,27 +39,27 @@ type: application
 dependencies:
   - name: dotnet-build
     alias: build
-    version: 0.0.1
+    version: 0.0.2
     repository: oci://registry-1.docker.io/buildcharts
 
   - name: dotnet-docker
     alias: docker
-    version: 0.0.1
+    version: 0.0.3
     repository: oci://registry-1.docker.io/buildcharts
 
   - name: dotnet-nuget
     alias: nuget
-    version: 0.0.1
+    version: 0.0.2
     repository: oci://registry-1.docker.io/buildcharts
 
   - name: dotnet-publish
     alias: publish
-    version: 0.0.1
+    version: 0.0.2
     repository: oci://registry-1.docker.io/buildcharts
 
   - name: dotnet-test
     alias: test
-    version: 0.0.1
+    version: 0.0.2
     repository: oci://registry-1.docker.io/buildcharts
 ```
 
@@ -73,6 +73,16 @@ targets:
   src/MyApp/MyApp.csproj:
     type: build
 ```
+
+The build chart keeps `Version` out of the solution build so version-only CI changes do not invalidate the full build graph. It still passes `SourceRevisionId` during `dotnet build` so Source Link and assembly metadata can include the commit id. Changing only `COMMIT` can still invalidate generated assembly info for projects that include source revision metadata.
+
+It also enables an MSBuild `obj` cache through BuildKit:
+
+```dockerfile
+--mount=type=cache,id=msbuild-obj-${BUILDCHARTS_CACHE_SCOPE}-${BUILDCHARTS_TYPE}-${CONFIGURATION}-${TARGETARCH},target=/src/.buildcache/obj
+```
+
+Set `BUILDCHARTS_CACHE_SCOPE` to a stable sanitized repository or pipeline scope when the same BuildKit builder is shared by multiple repositories. Use `BUILDCHARTS_ENABLE_OBJ_CACHE=false` to keep the cache mount present but make MSBuild use its default `obj/` location.
 
 ### `type: docker`
 Publishes a .NET project and prepares a runtime docker image using the published output.
@@ -97,6 +107,8 @@ targets:
       # `pathsInclude` can be used to only pack nuget when git diffs in origin/HEAD includes specific paths.
       pathsInclude: src/MyDependentContractsNuget src/MyDependentContractsNuget
 ```
+
+The NuGet chart restores and builds the package project during `dotnet pack`, applying `PackageVersion`, `Version`, and `SourceRevisionId` only there. This keeps package DLL versions correct without forcing every test/application project in the solution to rebuild when only the package version changes.
 
 ### `type: publish`
 Publishes a .NET project using `dotnet publish`.

@@ -4,6 +4,8 @@
 FROM build AS pre-publish
 
 ARG BUILDCHARTS_SRC
+ARG BUILDCHARTS_TYPE=publish
+ARG BUILDCHARTS_CACHE_SCOPE=default
 ARG CONFIGURATION=Release
 ARG DEBUG_SYMBOLS=false
 ARG DEBUG_TYPE=none
@@ -15,8 +17,10 @@ ARG PUBLISH_SINGLE_FILE=true
 ARG PUBLISH_TRIMMED=true
 ARG RUNTIME=win-x64
 ARG SELF_CONTAINED=true
+ARG TARGETARCH
 ARG TRIM_MODE=partial
 ARG VERSION
+ENV BUILDCHARTS_TYPE=$BUILDCHARTS_TYPE
 
 # Restore with secrets.
 RUN --mount=type=secret,id=VSS_NUGET_ACCESSTOKEN,env=VSS_NUGET_ACCESSTOKEN \
@@ -25,6 +29,7 @@ RUN --mount=type=secret,id=VSS_NUGET_ACCESSTOKEN,env=VSS_NUGET_ACCESSTOKEN \
     --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
     --mount=type=cache,target=/root/.local/share/NuGet/plugins-cache \
     --mount=type=cache,target=/tmp/NuGetScratchroot \
+    --mount=type=cache,id=msbuild-obj-${BUILDCHARTS_CACHE_SCOPE}-${BUILDCHARTS_TYPE}-${CONFIGURATION}-${TARGETARCH},target=/src/.buildcache/obj,sharing=locked \
       dotnet restore "/src/$BUILDCHARTS_SRC" --runtime "$RUNTIME"
 
 # Execute publish.
@@ -32,6 +37,7 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
     --mount=type=cache,target=/root/.local/share/NuGet/plugins-cache \
     --mount=type=cache,target=/tmp/NuGetScratchroot \
+    --mount=type=cache,id=msbuild-obj-${BUILDCHARTS_CACHE_SCOPE}-${BUILDCHARTS_TYPE}-${CONFIGURATION}-${TARGETARCH},target=/src/.buildcache/obj,sharing=locked \
     dotnet publish "/src/$BUILDCHARTS_SRC" \
         --no-restore \
         --configuration "$CONFIGURATION" \
