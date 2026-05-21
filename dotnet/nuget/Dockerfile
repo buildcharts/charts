@@ -19,7 +19,8 @@ ARG SOURCELINK_STRICT=1
 # - Add this to your .csproj to include PDBs in the package (when not using symbol packages):
 #     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
 
-RUN set -eu; \
+RUN --mount=type=bind,from=git,source=.,target=/src/.git,readonly \
+    set -eu; \
     echo "Verifying SourceLink prerequisites" >&2; \
     root="/src"; \
     warnings=0; \
@@ -71,7 +72,8 @@ RUN set -eu; \
       fi; \
     fi
 
-RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+RUN --mount=type=bind,from=git,source=.,target=/src/.git,readonly \
+    --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
     --mount=type=cache,target=/root/.local/share/NuGet/plugins-cache \
     --mount=type=cache,target=/tmp/NuGetScratchroot \
