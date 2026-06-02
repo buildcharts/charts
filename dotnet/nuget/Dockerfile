@@ -103,13 +103,13 @@ RUN --mount=type=bind,from=git,source=.,target=/src/.git,readonly \
                 echo "No changes detected ($COMPARE_REF). Skipping nuget pack..." >&2; \
                 exit 0; \
             fi; \
+            echo "Changes detected. Running dotnet pack..." >&2; \
         else \
             # No remote compare ref found. With fetchDepth=0 + explicit fetch in CI,
             # this path should be rare. Fail open to avoid false skips.
             echo "No origin compare ref found. Running dotnet pack..." >&2; \
         fi; \
     fi; \
-    echo "Changes detected. Running dotnet pack..." >&2; \
     dotnet pack "/src/$BUILDCHARTS_SRC" \
         --no-build \
         --configuration "$CONFIGURATION" \
