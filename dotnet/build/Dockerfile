@@ -14,7 +14,7 @@ WORKDIR /src
 RUN curl -L https://raw.githubusercontent.com/Microsoft/artifacts-credprovider/master/helpers/installcredprovider.sh | sh
 
 # Copy project files and restore as distinct layer.
-COPY --link --parents *.sln *.slnx **/*.csproj **/*.dcproj **/[Nn]u[Gg]et.[Cc]onfig **/Directory.Build.props **/Directory.Build.targets **/Directory.Packages.props **/global.json ./
+COPY --link --parents *.sln *.slnx **/*.csproj **/*.dcproj **/[Nn]u[Gg]et.[Cc]onfig **/Directory.Build.props **/Directory.Build.targets **/Directory.Packages.props **/global.json **/packages.lock.json ./
 
 # Optional: Clean is only needed when bin/obj folders are NOT included in .dockerignore, which is best practice, so we skip it.
 #RUN dotnet clean 
