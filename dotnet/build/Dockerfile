@@ -22,6 +22,7 @@ COPY --link --parents *.sln *.slnx **/*.csproj **/*.dcproj **/[Nn]u[Gg]et.[Cc]on
 ARG BUILDCHARTS_SRC
 
 # Restore with secrets.
+# --use-lock-file creates missing lock files; --locked-mode only fails when an existing lock file is out of sync.
 RUN --mount=type=secret,id=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS,env=ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS \
     --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     --mount=type=cache,target=/root/.local/share/NuGet/v3-cache \
