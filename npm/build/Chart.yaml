@@ -1,0 +1,10 @@
+apiVersion: v2
+name: npm-build
+description: A build chart for npm install and build
+type: library
+version: 0.0.1
+maintainers:
+- name: Eddie Tisma
+  url: https://github.com/buildcharts/charts/
+sources:
+- https://github.com/buildcharts/charts/blob/main/npm/build/
