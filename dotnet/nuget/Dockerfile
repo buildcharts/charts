@@ -79,42 +79,76 @@ RUN --mount=type=bind,from=git,source=.,target=/src/.git,readonly \
     --mount=type=cache,target=/tmp/NuGetScratchroot \
     set -eu; \
     mkdir -p /output; \
+    pack() { \
+        dotnet pack "/src/$BUILDCHARTS_SRC" \
+            --no-build \
+            --configuration "$CONFIGURATION" \
+            --output "/output" \
+            /p:PackageVersion="$VERSION"; \
+    }; \
     PATHS_INCLUDE="${PATHS_INCLUDE:-}"; \
-    if [ -n "$PATHS_INCLUDE" ]; then \
-        COMPARE_REF=""; \
-        if git -C /src rev-parse --verify --quiet origin/main >/dev/null; then \
-            COMPARE_REF="origin/main...HEAD"; \
-        elif git -C /src rev-parse --verify --quiet origin/master >/dev/null; then \
-            COMPARE_REF="origin/master...HEAD"; \
-        elif git -C /src rev-parse --verify --quiet origin/HEAD >/dev/null; then \
-            COMPARE_REF="origin/HEAD...HEAD"; \
-        fi; \
-        if [ -n "$COMPARE_REF" ]; then \
-            echo "Detecting changes in $PATHS_INCLUDE against $COMPARE_REF" >&2; \
-            branch_clean=0; \
-            git -C /src diff --quiet --exit-code "$COMPARE_REF" -- $PATHS_INCLUDE || branch_clean=$?; \
-            worktree_clean=0; \
-            # Check unstaged changes
-            git -C /src diff --quiet --exit-code -- $PATHS_INCLUDE || worktree_clean=$?; \
-            index_clean=0; \
-            # Check staged changes
-            git -C /src diff --cached --quiet --exit-code -- $PATHS_INCLUDE || index_clean=$?; \
-            if [ "$branch_clean" -eq 0 ] && [ "$worktree_clean" -eq 0 ] && [ "$index_clean" -eq 0 ]; then \
-                echo "No changes detected ($COMPARE_REF). Skipping nuget pack..." >&2; \
-                exit 0; \
-            fi; \
-            echo "Changes detected. Running dotnet pack..." >&2; \
-        else \
-            # No remote compare ref found. With fetchDepth=0 + explicit fetch in CI,
-            # this path should be rare. Fail open to avoid false skips.
-            echo "No origin compare ref found. Running dotnet pack..." >&2; \
-        fi; \
+    if [ -z "$PATHS_INCLUDE" ]; then \
+        echo "PATHS_INCLUDE is empty. Running dotnet pack..." >&2; \
+        pack; \
+        exit 0; \
     fi; \
-    dotnet pack "/src/$BUILDCHARTS_SRC" \
-        --no-build \
-        --configuration "$CONFIGURATION" \
-        --output "/output" \
-        /p:PackageVersion="$VERSION"
+    # PATHS_INCLUDE scenarios:
+    # 1. Default-branch CI build: detached HEAD at origin/HEAD -> compare HEAD^..HEAD.
+    # 2. PR/feature build with origin/HEAD available: compare origin/HEAD...HEAD.
+    # 3. PR merge commit without origin/HEAD: compare first parent to HEAD.
+    # 4. Local changes are checked via branch diff, worktree diff, staged diff, and untracked files.
+    # 5. Shallow checkout always runs pack to avoid false skips.
+    SHALLOW_REPOSITORY="$(git -C /src rev-parse --is-shallow-repository 2>/dev/null || echo unknown)"; \
+    if [ "$SHALLOW_REPOSITORY" = "true" ]; then \
+        echo "warning: Git repository is shallow inside the container." >&2; \
+        echo "- impact: PATHS_INCLUDE diff detection may incorrectly skip dotnet pack." >&2; \
+        echo "Running dotnet pack to avoid a false skip." >&2; \
+        pack; \
+        exit 0; \
+    fi; \
+    COMPARE_REF=""; \
+    DEFAULT_BRANCH_REF="$(git -C /src symbolic-ref --quiet --short refs/remotes/origin/HEAD || true)"; \
+    HAS_PARENT="$(git -C /src rev-parse --verify --quiet HEAD^ >/dev/null && echo 1 || echo 0)"; \
+    HAS_SECOND_PARENT="$(git -C /src rev-parse --verify --quiet HEAD^2 >/dev/null && echo 1 || echo 0)"; \
+    IS_DETACHED_HEAD="$(git -C /src symbolic-ref --quiet HEAD >/dev/null && echo 0 || echo 1)"; \
+    IS_DEFAULT_HEAD="$(test -n "$DEFAULT_BRANCH_REF" && test "$(git -C /src rev-parse HEAD)" = "$(git -C /src rev-parse "$DEFAULT_BRANCH_REF")" && echo 1 || echo 0)"; \
+    if [ "$IS_DETACHED_HEAD" = "1" ] && [ "$IS_DEFAULT_HEAD" = "1" ]; then \
+        if [ "$HAS_PARENT" != "1" ]; then \
+            echo "No parent commit found for default-branch HEAD. Running dotnet pack..." >&2; \
+            pack; \
+            exit 0; \
+        fi; \
+        COMPARE_REF="HEAD^..HEAD"; \
+    elif [ -n "$DEFAULT_BRANCH_REF" ]; then \
+        COMPARE_REF="$DEFAULT_BRANCH_REF...HEAD"; \
+    elif [ "$IS_DETACHED_HEAD" = "1" ] && [ "$HAS_SECOND_PARENT" = "1" ]; then \
+        COMPARE_REF="HEAD^1..HEAD"; \
+    fi; \
+    if [ -z "$COMPARE_REF" ]; then \
+        # No remote compare ref found. With fetchDepth=0 + explicit fetch in CI,
+        # this path should be rare. Fail open to avoid false skips.
+        echo "No origin compare ref found. Running dotnet pack..." >&2; \
+        pack; \
+        exit 0; \
+    fi; \
+    echo "Detecting changes in $PATHS_INCLUDE against $COMPARE_REF" >&2; \
+    HAS_CHANGES=0; \
+    # Check committed branch changes.
+    git -C /src -c core.autocrlf=false -c core.safecrlf=false diff --quiet --exit-code "$COMPARE_REF" -- $PATHS_INCLUDE || HAS_CHANGES=1; \
+    # Check unstaged changes; ignore CRLF-only differences from Windows-mounted worktrees.
+    git -C /src -c core.autocrlf=false -c core.safecrlf=false diff --ignore-cr-at-eol --exit-code -- $PATHS_INCLUDE >/dev/null || HAS_CHANGES=1; \
+    # Check staged changes.
+    git -C /src -c core.autocrlf=false -c core.safecrlf=false diff --cached --quiet --exit-code -- $PATHS_INCLUDE || HAS_CHANGES=1; \
+    # Check untracked files; ignore packages.lock.json generated by restore.
+    if [ -n "$(git -C /src ls-files --others --exclude-standard -- $PATHS_INCLUDE | grep -Ev '(^|/)packages\.lock\.json$' || true)" ]; then \
+        HAS_CHANGES=1; \
+    fi; \
+    if [ "$HAS_CHANGES" -eq 0 ]; then \
+        echo "No changes detected ($COMPARE_REF). Skipping nuget pack..." >&2; \
+        exit 0; \
+    fi; \
+    echo "Changes detected. Running dotnet pack..." >&2; \
+    pack
 
 ###################################
 # Target: nuget
