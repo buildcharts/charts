@@ -91,4 +91,4 @@ RUN --mount=type=bind,from=git,source=.,target=/src/.git,readonly \
 # Target: npm
 ###################################
 FROM scratch AS npm
-COPY --from=pre-npm /output/ /
+COPY --from=pre-npm /output /

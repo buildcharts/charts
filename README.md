@@ -27,4 +27,5 @@ All Dockerfiles may produce build output by creating files inside the `/output` 
 
 ## Documentation
 - [dotnet/README.md](dotnet/README.md) – Charts for building .NET applications
+- [java/README.md](java/README.md) – Charts for building Java application
 - [npm/README.md](npm/README.md) – Charts for building NPM applications

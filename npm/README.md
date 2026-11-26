@@ -32,9 +32,7 @@ The dependency chart at `charts/buildcharts/Chart.yaml` is used to resolve speci
 apiVersion: v2
 name: buildcharts
 version: 0.0.1
-
 description: A meta-chart to define build pipeline targets and templates
-
 type: application
 
 dependencies:
