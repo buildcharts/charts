@@ -116,6 +116,19 @@ targets:
     type: test
 ```
 
+## Feed authentication
+
+Enable `NuGetAuthenticate@v1` in `build.yml` to provide NuGet credentials as BuildKit secrets.
+
+```yaml
+plugins:
+  - NuGetAuthenticate@v1
+```
+
+List the Azure Artifacts package sources in the repository's `NuGet.Config`. The build chart mounts `ARTIFACTS_CREDENTIALPROVIDER_EXTERNAL_FEED_ENDPOINTS` for the Azure Artifacts Credential Provider during restore and caches packages under `/root/.nuget/packages`.
+
+In Azure Pipelines, expose `$(System.AccessToken)` as `SYSTEM_ACCESSTOKEN` to BuildCharts and grant the build identity access to the feed. Keep credentials out of `NuGet.Config` and exclude `.buildcharts/` from the Docker context.
+
 ## Links
 - https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/publish-test-results-v2?view=azure-pipelinesl#docker
 - https://learn.microsoft.com/en-us/dotnet/core/project-sdk/msbuild-props#continuousintegrationbuild
