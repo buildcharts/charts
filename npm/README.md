@@ -98,6 +98,7 @@ targets:
       contexts:
         git: .git
       args:
+        # `pathsInclude` checks these paths for changes against `origin/HEAD` before packing.
         pathsInclude: projects/my-library projects/shared
 ```
 
