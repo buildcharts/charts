@@ -115,5 +115,18 @@ targets:
         npm_script: test
 ```
 
+## Feed authentication
+
+Enable `NpmAuthenticate@v1` in `build.yml` to provide the `npmrc` BuildKit secret.
+
+```yaml
+plugins:
+  - NpmAuthenticate@v1
+```
+
+List the Azure Artifacts registries in `.npmrc` next to `build.yml`. Set `NPM_AUTHENTICATE_WORKING_FILE` to use a different `.npmrc` file. The build chart mounts the secret at `/src/.npmrc` during `pnpm install` and caches downloaded dependencies in the pnpm store.
+
+In Azure Pipelines, expose `$(System.AccessToken)` as `SYSTEM_ACCESSTOKEN` to BuildCharts and grant the build identity access to the feed. Exclude `.buildcharts/` and any `.npmrc` containing credentials from the Docker context.
+
 ## Links
 - https://learn.microsoft.com/en-us/azure/devops/artifacts/npm/npmrc
